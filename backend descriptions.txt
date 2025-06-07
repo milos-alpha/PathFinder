@@ -1,0 +1,502 @@
+File Structure
+hall-locator-backend/
+├── config/
+│   ├── db.js
+│   └── jwt.js
+├── controllers/
+│   ├── admin.js
+│   ├── auth.js
+│   └── user.js
+├── middleware/
+│   ├── auth.js
+│   └── upload.js
+├── models/
+│   ├── Building.js
+│   ├── User.js
+│   └── QRCode.js
+├── routes/
+│   ├── admin.js
+│   ├── auth.js
+│   └── user.js
+├── uploads/
+├── .env
+├── app.js
+└── server.js
+3. Configuration Files
+config/db.js
+javascript
+const mongoose = require('mongoose');
+
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('MongoDB Connected...');
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+};
+
+module.exports = connectDB;
+config/jwt.js
+javascript
+module.exports = {
+  secret: process.env.JWT_SECRET,
+  expiresIn: '7d',
+};
+4. Models
+models/User.js
+javascript
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+const UserSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+UserSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
+
+UserSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+module.exports = mongoose.model('User', UserSchema);
+models/Building.js
+javascript
+const mongoose = require('mongoose');
+
+const BuildingSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  description: {
+    type: String,
+  },
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: true,
+    },
+    coordinates: {
+      type: [Number],
+      required: true,
+    },
+  },
+  address: {
+    type: String,
+    required: true,
+  },
+  qrCode: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'QRCode',
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+BuildingSchema.index({ location: '2dsphere' });
+
+module.exports = mongoose.model('Building', BuildingSchema);
+models/QRCode.js
+javascript
+const mongoose = require('mongoose');
+
+const QRCodeSchema = new mongoose.Schema({
+  building: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Building',
+    required: true,
+  },
+  qrCodeData: {
+    type: String,
+    required: true,
+  },
+  imagePath: {
+    type: String,
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+module.exports = mongoose.model('QRCode', QRCodeSchema);
+5. Middleware
+middleware/auth.js
+javascript
+const jwt = require('jsonwebtoken');
+const config = require('../config/jwt');
+const User = require('../models/User');
+
+exports.authenticate = async (req, res, next) => {
+  try {
+    const token = req.header('Authorization').replace('Bearer ', '');
+    const decoded = jwt.verify(token, config.secret);
+    const user = await User.findOne({ _id: decoded.id });
+
+    if (!user) {
+      throw new Error();
+    }
+
+    req.token = token;
+    req.user = user;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: 'Please authenticate' });
+  }
+};
+
+exports.authorize = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        error: `User role ${req.user.role} is not authorized to access this route`,
+      });
+    }
+    next();
+  };
+};
+middleware/upload.js
+javascript
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
+  },
+});
+
+const upload = multer({ storage });
+
+module.exports = upload;
+6. Controllers
+controllers/auth.js
+javascript
+const jwt = require('jsonwebtoken');
+const config = require('../config/jwt');
+const User = require('../models/User');
+
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+
+    user = new User({ name, email, password, role });
+    await user.save();
+
+    const payload = { id: user.id };
+    const token = jwt.sign(payload, config.secret, { expiresIn: config.expiresIn });
+
+    res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
+
+    const payload = { id: user.id };
+    const token = jwt.sign(payload, config.secret, { expiresIn: config.expiresIn });
+
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+controllers/admin.js
+javascript
+const Building = require('../models/Building');
+const QRCode = require('../models/QRCode');
+const qr = require('qr-image');
+const fs = require('fs');
+const path = require('path');
+
+exports.createBuilding = async (req, res) => {
+  try {
+    const { name, description, address, latitude, longitude } = req.body;
+
+    const building = new Building({
+      name,
+      description,
+      address,
+      location: {
+        type: 'Point',
+        coordinates: [longitude, latitude],
+      },
+      createdBy: req.user.id,
+    });
+
+    await building.save();
+
+    // Generate QR Code
+    const qrData = JSON.stringify({
+      buildingId: building._id,
+      name: building.name,
+      coordinates: building.location.coordinates,
+    });
+
+    const qrCode = qr.image(qrData, { type: 'png' });
+    const qrCodePath = path.join(__dirname, '../uploads', `qr-${building._id}.png`);
+    qrCode.pipe(fs.createWriteStream(qrCodePath));
+
+    const qrCodeRecord = new QRCode({
+      building: building._id,
+      qrCodeData: qrData,
+      imagePath: qrCodePath,
+    });
+
+    await qrCodeRecord.save();
+
+    building.qrCode = qrCodeRecord._id;
+    await building.save();
+
+    res.status(201).json({
+      building,
+      qrCode: {
+        data: qrData,
+        imageUrl: `/uploads/qr-${building._id}.png`,
+      },
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.getAllBuildings = async (req, res) => {
+  try {
+    const buildings = await Building.find().populate('qrCode');
+    res.json(buildings);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.getBuildingQRCode = async (req, res) => {
+  try {
+    const building = await Building.findById(req.params.id).populate('qrCode');
+    if (!building) {
+      return res.status(404).json({ error: 'Building not found' });
+    }
+
+    res.sendFile(building.qrCode.imagePath);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+controllers/user.js
+javascript
+const Building = require('../models/Building');
+
+exports.searchBuildings = async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    const buildings = await Building.find({
+      $or: [
+        { name: { $regex: query, $options: 'i' } },
+        { address: { $regex: query, $options: 'i' } },
+      ],
+    });
+
+    res.json(buildings);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.getBuildingDirections = async (req, res) => {
+  try {
+    const { buildingId } = req.params;
+    const { longitude, latitude } = req.query;
+
+    const building = await Building.findById(buildingId);
+    if (!building) {
+      return res.status(404).json({ error: 'Building not found' });
+    }
+
+    res.json({
+      origin: {
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+      },
+      destination: {
+        latitude: building.location.coordinates[1],
+        longitude: building.location.coordinates[0],
+      },
+      building: {
+        id: building._id,
+        name: building.name,
+        address: building.address,
+      },
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+7. Routes
+routes/auth.js
+javascript
+const express = require('express');
+const router = express.Router();
+const { check } = require('express-validator');
+const authController = require('../controllers/auth');
+
+router.post(
+  '/register',
+  [
+    check('name', 'Name is required').not().isEmpty(),
+    check('email', 'Please include a valid email').isEmail(),
+    check('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 }),
+  ],
+  authController.register
+);
+
+router.post(
+  '/login',
+  [
+    check('email', 'Please include a valid email').isEmail(),
+    check('password', 'Password is required').exists(),
+  ],
+  authController.login
+);
+
+module.exports = router;
+routes/admin.js
+javascript
+const express = require('express');
+const router = express.Router();
+const { authenticate, authorize } = require('../middleware/auth');
+const adminController = require('../controllers/admin');
+
+router.use(authenticate);
+router.use(authorize('admin'));
+
+router.post('/buildings', adminController.createBuilding);
+router.get('/buildings', adminController.getAllBuildings);
+router.get('/buildings/:id/qrcode', adminController.getBuildingQRCode);
+
+module.exports = router;
+routes/user.js
+javascript
+const express = require('express');
+const router = express.Router();
+const { authenticate } = require('../middleware/auth');
+const userController = require('../controllers/user');
+
+router.use(authenticate);
+
+router.get('/buildings/search', userController.searchBuildings);
+router.get('/buildings/:buildingId/directions', userController.getBuildingDirections);
+
+module.exports = router;
+8. Main Application Files
+app.js
+javascript
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const connectDB = require('./config/db');
+
+// Connect to database
+connectDB();
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/user', require('./routes/user'));
+
+// Error handling
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
+
+module.exports = app;
+server.js
+javascript
+const app = require('./app');
+const http = require('http');
+const PORT = process.env.PORT || 5000;
+
+const server = http.createServer(app);
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+9. Environment Variables (.env)
+MONGODB_URI=mongodb://localhost:27017/hall-locator
+JWT_SECRET=your_jwt_secret
+PORT=5000
