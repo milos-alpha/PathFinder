@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { globalStyles } from '../constants/styles';
 import DirectionMap from '../components/DirectionMap';
 import api from '../services/api';
@@ -17,8 +17,8 @@ const DirectionsScreen = ({ route }) => {
     const fetchData = async () => {
       try {
         // Get building details
-        const buildingResponse = await api.get(`/user/buildings/${buildingId}/directions`);
-        setBuilding(buildingResponse.data.building);
+        const buildingResponse = await api.get(`/user/buildings/${buildingId}`);
+        setBuilding(buildingResponse.data);
         
         // Get current location
         const location = await getCurrentLocation();
@@ -36,6 +36,28 @@ const DirectionsScreen = ({ route }) => {
     
     fetchData();
   }, [buildingId]);
+
+  // Calculate distance between two points (Haversine formula)
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the Earth in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    return distance.toFixed(2);
+  };
+
+  // Estimate walking time (average walking speed: 5 km/h)
+  const calculateWalkingTime = (distance) => {
+    const walkingSpeedKmH = 5;
+    const timeInHours = distance / walkingSpeedKmH;
+    const timeInMinutes = Math.round(timeInHours * 60);
+    return timeInMinutes;
+  };
 
   if (loading) {
     return <LoadingIndicator />;
@@ -57,6 +79,15 @@ const DirectionsScreen = ({ route }) => {
     );
   }
 
+  const distance = calculateDistance(
+    currentLocation.latitude,
+    currentLocation.longitude,
+    building.latitude,
+    building.longitude
+  );
+
+  const walkingTime = calculateWalkingTime(parseFloat(distance));
+
   return (
     <View style={globalStyles.container}>
       <Text style={globalStyles.title}>Directions to {building.name}</Text>
@@ -65,18 +96,23 @@ const DirectionsScreen = ({ route }) => {
       <DirectionMap
         origin={currentLocation}
         destination={{
-          latitude: building.destination.latitude,
-          longitude: building.destination.longitude,
+          latitude: building.latitude,
+          longitude: building.longitude,
         }}
       />
       
       <View style={styles.directionsInfo}>
         <Text style={styles.directionsText}>
-          Distance: {building.distance} km
+          Distance: {distance} km
         </Text>
         <Text style={styles.directionsText}>
-          Estimated Time: {building.duration} mins
+          Estimated Walking Time: {walkingTime} mins
         </Text>
+        {building.description && (
+          <Text style={styles.description}>
+            Description: {building.description}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -90,14 +126,30 @@ const styles = StyleSheet.create({
   },
   directionsInfo: {
     marginTop: 15,
+    padding: 15,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   directionsText: {
     fontSize: 16,
-    marginBottom: 5,
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  description: {
+    fontSize: 14,
+    color: 'gray',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   error: {
     color: 'red',
     textAlign: 'center',
+    fontSize: 16,
   },
 });
 

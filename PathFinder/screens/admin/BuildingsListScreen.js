@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { globalStyles } from '../../constants/styles';
+import { colors } from '../../constants/colors';
 import BuildingCard from '../../components/BuildingCard';
 import api from '../../services/api';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -49,7 +50,7 @@ const BuildingsListScreen = ({ navigation }) => {
         style={styles.addButton}
         onPress={() => navigation.navigate('AddBuilding')}
       >
-        <Ionicons name="add" size={30} color="white" />
+        <Ionicons name="add" size={30} color={colors.white} />
       </TouchableOpacity>
     </View>
   );
@@ -59,19 +60,23 @@ const styles = StyleSheet.create({
   noBuildings: {
     textAlign: 'center',
     marginTop: 20,
-    color: 'gray',
+    color: colors.gray,
   },
   addButton: {
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: 'blue',
+    backgroundColor: colors.primary,
     width: 60,
     height: 60,
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });
 

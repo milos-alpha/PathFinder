@@ -1,6 +1,7 @@
 import React from 'react';
-import { TextInput } from 'react-native';
-import { colors, globalStyles } from '../constants/styles';
+import { TextInput, StyleSheet } from 'react-native';
+import { colors } from '../constants/colors';
+import { globalStyles } from '../constants/styles';
 
 const CustomTextInput = ({ style, ...props }) => {
   return (

@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { globalStyles } from '../../constants/styles';
+import { colors } from '../../constants/colors';
 import AnimatedButton from '../../components/AnimatedButton';
 import { AuthContext } from '../../context/AuthContext';
 import TextInput from '../../components/TextInput';
@@ -25,7 +26,9 @@ const LoginScreen = ({ navigation }) => {
       style={globalStyles.container}
     >
       <Text style={globalStyles.title}>Login</Text>
+      
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      
       <TextInput
         placeholder="Email"
         value={email}
@@ -33,13 +36,16 @@ const LoginScreen = ({ navigation }) => {
         keyboardType="email-address"
         autoCapitalize="none"
       />
+      
       <TextInput
         placeholder="Password"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
+      
       <AnimatedButton title="Login" onPress={handleLogin} />
+      
       <View style={styles.footer}>
         <Text>Don't have an account? </Text>
         <Text
@@ -55,7 +61,7 @@ const LoginScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   error: {
-    color: 'red',
+    color: colors.danger,
     marginBottom: 15,
     textAlign: 'center',
   },
@@ -65,7 +71,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   link: {
-    color: 'blue',
+    color: colors.primary,
     fontWeight: 'bold',
   },
 });
