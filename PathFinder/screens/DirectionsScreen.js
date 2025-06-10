@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { globalStyles } from '../constants/styles';
 import DirectionMap from '../components/DirectionMap';
 import api from '../services/api';
 import { getCurrentLocation } from '../services/location';
 import LoadingIndicator from '../components/LoadingIndicator';
+import { BASE_URL } from '../constants/config';
 
 const DirectionsScreen = ({ route }) => {
   const { buildingId } = route.params;
   const [building, setBuilding] = useState(null);
+  const [directions, setDirections] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -16,19 +18,40 @@ const DirectionsScreen = ({ route }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get building details
-        const buildingResponse = await api.get(`/user/buildings/${buildingId}`);
-        setBuilding(buildingResponse.data);
-        
-        // Get current location
+        // Get current location first
         const location = await getCurrentLocation();
         setCurrentLocation({
           latitude: location.latitude,
           longitude: location.longitude,
         });
+
+        // Then get building directions with current location
+        const response = await api.get(`${BASE_URL}/user/buildings/${buildingId}/directions`, {
+          params: {
+            latitude: location.latitude.toString(),
+            longitude: location.longitude.toString()
+          }
+        });
+        
+        // Set building data
+        setBuilding(response.data.building);
+        
+        // Set directions data
+        setDirections({
+          origin: response.data.origin,
+          destination: response.data.destination,
+          distance: response.data.distance,
+          duration: response.data.duration
+        });
       } catch (err) {
         console.error('Error fetching directions:', err);
-        setError('Could not get directions. Please try again.');
+        let errorMessage = 'Could not get directions. Please try again.';
+        
+        if (err.message.includes('Permission to access location was denied')) {
+          errorMessage = 'Location permission was denied. Please enable location services.';
+        }
+        
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -36,28 +59,6 @@ const DirectionsScreen = ({ route }) => {
     
     fetchData();
   }, [buildingId]);
-
-  // Calculate distance between two points (Haversine formula)
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Radius of the Earth in kilometers
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const distance = R * c;
-    return distance.toFixed(2);
-  };
-
-  // Estimate walking time (average walking speed: 5 km/h)
-  const calculateWalkingTime = (distance) => {
-    const walkingSpeedKmH = 5;
-    const timeInHours = distance / walkingSpeedKmH;
-    const timeInMinutes = Math.round(timeInHours * 60);
-    return timeInMinutes;
-  };
 
   if (loading) {
     return <LoadingIndicator />;
@@ -71,7 +72,7 @@ const DirectionsScreen = ({ route }) => {
     );
   }
 
-  if (!building || !currentLocation) {
+  if (!building || !directions || !currentLocation) {
     return (
       <View style={globalStyles.container}>
         <Text>No data available</Text>
@@ -79,39 +80,43 @@ const DirectionsScreen = ({ route }) => {
     );
   }
 
-  const distance = calculateDistance(
-    currentLocation.latitude,
-    currentLocation.longitude,
-    building.latitude,
-    building.longitude
-  );
-
-  const walkingTime = calculateWalkingTime(parseFloat(distance));
+  // Additional safety check for destination coordinates
+  if (!directions.destination || 
+      typeof directions.destination.latitude !== 'number' || 
+      typeof directions.destination.longitude !== 'number') {
+    return (
+      <View style={globalStyles.container}>
+        <Text style={styles.error}>Invalid destination coordinates</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={globalStyles.container}>
-      <Text style={globalStyles.title}>Directions to {building.name}</Text>
-      <Text style={styles.address}>{building.address}</Text>
+      <Text style={globalStyles.title}>Directions to {building.name || 'Unknown Building'}</Text>
+      <Text style={styles.address}>{building.address || 'No address available'}</Text>
       
       <DirectionMap
         origin={currentLocation}
         destination={{
-          latitude: building.latitude,
-          longitude: building.longitude,
+          latitude: directions.destination.latitude,
+          longitude: directions.destination.longitude,
         }}
       />
       
       <View style={styles.directionsInfo}>
-        <Text style={styles.directionsText}>
-          Distance: {distance} km
-        </Text>
-        <Text style={styles.directionsText}>
-          Estimated Walking Time: {walkingTime} mins
-        </Text>
-        {building.description && (
-          <Text style={styles.description}>
-            Description: {building.description}
-          </Text>
+        {directions.distance !== null && directions.distance !== undefined && 
+         directions.duration !== null && directions.duration !== undefined ? (
+          <>
+            <Text style={styles.directionsText}>
+              Distance: {directions.distance.toFixed(2)} km
+            </Text>
+            <Text style={styles.directionsText}>
+              Estimated Time: {Math.round(directions.duration)} mins
+            </Text>
+          </>
+        ) : (
+          <Text>Calculating route information...</Text>
         )}
       </View>
     </View>

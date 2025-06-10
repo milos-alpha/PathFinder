@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native';
 import { colors } from '../constants/colors';
 
 const DirectionMap = ({ origin, destination }) => {
-  if (!origin || !destination) {return null;}
+  if (!origin || !destination) return null;
 
   const coordinates = [
     {
@@ -23,9 +23,10 @@ const DirectionMap = ({ origin, destination }) => {
       initialRegion={{
         latitude: (origin.latitude + destination.latitude) / 2,
         longitude: (origin.longitude + destination.longitude) / 2,
-        latitudeDelta: Math.abs(origin.latitude - destination.latitude) * 1.5,
-        longitudeDelta: Math.abs(origin.longitude - destination.longitude) * 1.5,
+        latitudeDelta: Math.abs(origin.latitude - destination.latitude) * 2,
+        longitudeDelta: Math.abs(origin.longitude - destination.longitude) * 2,
       }}
+      showsUserLocation={true}
     >
       <Marker
         coordinate={origin}

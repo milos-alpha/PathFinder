@@ -56,6 +56,7 @@ exports.createBuilding = async (req, res) => {
   }
 };
 
+
 exports.getAllBuildings = async (req, res) => {
   try {
     const buildings = await Building.find().populate('qrCode');
@@ -66,6 +67,7 @@ exports.getAllBuildings = async (req, res) => {
   }
 };
 
+
 exports.getBuildingQRCode = async (req, res) => {
   try {
     const building = await Building.findById(req.params.id).populate('qrCode');
@@ -73,7 +75,16 @@ exports.getBuildingQRCode = async (req, res) => {
       return res.status(404).json({ error: 'Building not found' });
     }
 
-    res.sendFile(building.qrCode.imagePath);
+    // Return JSON with the URL instead of sending the file
+    res.json({
+      qrCodeUrl: `/api/uploads/qr-${building._id}.png`,
+      building: {
+        id: building._id,
+        name: building.name,
+        address: building.address,
+        description: building.description,
+      }
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Server error' });

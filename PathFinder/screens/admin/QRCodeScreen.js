@@ -1,6 +1,5 @@
-/* eslint-disable react-native/no-inline-styles */
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, Share } from 'react-native';
+import { View, Text, StyleSheet, Image, Share, Alert } from 'react-native';
 import { globalStyles } from '../../constants/styles';
 import QRCodeModal from '../../components/QRCodeModal';
 import api from '../../services/api';
@@ -13,42 +12,85 @@ const QRCodeScreen = ({ route }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchBuilding = async () => {
+    const fetchBuildingData = async () => {
       try {
         const response = await api.get(`/admin/buildings/${buildingId}/qrcode`);
-        setBuilding(response.data);
-        setQrCodeUrl(response.data.qrCode.imageUrl);
-      } catch (error) {
-        console.error('Error fetching QR code:', error);
+        const buildingData = response.data;
+        
+        setBuilding(buildingData.building);
+        
+        // Construct the correct QR code image URL
+        if (buildingData.qrCodeUrl) {
+          // Use the URL provided by the backend
+          setQrCodeUrl(buildingData.qrCodeUrl);
+        } else {
+          setError('QR code not available for this building');
+        }
+      } catch (err) {
+        console.error('Error fetching building data:', err);
+        setError('Failed to load building data. Please try again.');
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchBuilding();
+
+    fetchBuildingData();
   }, [buildingId]);
 
   const handleShareQRCode = async () => {
+    if (!qrCodeUrl) {
+      Alert.alert('Error', 'No QR code available to share');
+      return;
+    }
+
     try {
       await Share.share({
-        message: `QR Code for ${building.name}`,
+        message: `QR Code for ${building?.name || 'Building'}`,
         url: qrCodeUrl,
       });
     } catch (error) {
       console.error('Error sharing QR code:', error);
+      Alert.alert('Error', 'Failed to share QR code');
     }
+  };
+
+  const handleRetry = async () => {
+    setLoading(true);
+    setError(null);
+    // Re-fetch data by re-triggering useEffect
+    const response = await api.get(`/admin/buildings/${buildingId}/qrcode`);
+    if (response.data) {
+      setBuilding(response.data.building);
+      setQrCodeUrl(response.data.qrCodeUrl || '');
+    } else {
+      setError('Failed to load data');
+    }
+    setLoading(false);
   };
 
   if (loading) {
     return <LoadingIndicator />;
   }
 
+  if (error) {
+    return (
+      <View style={globalStyles.container}>
+        <Text style={styles.errorText}>{error}</Text>
+        <AnimatedButton
+          title="Retry"
+          onPress={handleRetry}
+        />
+      </View>
+    );
+  }
+
   if (!building) {
     return (
       <View style={globalStyles.container}>
-        <Text>Building not found</Text>
+        <Text style={styles.errorText}>Building not found</Text>
       </View>
     );
   }
@@ -57,6 +99,7 @@ const QRCodeScreen = ({ route }) => {
     <View style={globalStyles.container}>
       <Text style={globalStyles.title}>{building.name}</Text>
       <Text style={styles.address}>{building.address}</Text>
+      <Text style={styles.detailText}>{building.description || 'No description available'}</Text>
       
       {qrCodeUrl ? (
         <>
@@ -64,7 +107,10 @@ const QRCodeScreen = ({ route }) => {
             source={{ uri: qrCodeUrl }}
             style={styles.qrCodePreview}
             resizeMode="contain"
-            onPress={() => setModalVisible(true)}
+            onError={(error) => {
+              console.error('QR Code image failed to load:', error);
+              setError('Failed to load QR code image');
+            }}
           />
           
           <AnimatedButton
@@ -79,7 +125,7 @@ const QRCodeScreen = ({ route }) => {
           />
         </>
       ) : (
-        <Text>No QR Code available</Text>
+        <Text style={styles.noQrText}>No QR Code available for this building</Text>
       )}
       
       <QRCodeModal
@@ -102,6 +148,18 @@ const styles = StyleSheet.create({
     height: 200,
     alignSelf: 'center',
     marginBottom: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  noQrText: {
+    fontSize: 16,
+    color: 'gray',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
 

@@ -6,6 +6,7 @@ import BuildingCard from '../../components/BuildingCard';
 import api from '../../services/api';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import { Ionicons } from '@expo/vector-icons';
+import { BASE_URL } from '../../constants/config';
 
 const BuildingsListScreen = ({ navigation }) => {
   const [buildings, setBuildings] = useState([]);
@@ -14,7 +15,7 @@ const BuildingsListScreen = ({ navigation }) => {
   useEffect(() => {
     const fetchBuildings = async () => {
       try {
-        const response = await api.get('/admin/buildings');
+        const response = await api.get(`${BASE_URL}/admin/buildings`);
         setBuildings(response.data);
       } catch (error) {
         console.error('Error fetching buildings:', error);

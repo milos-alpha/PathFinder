@@ -14,10 +14,12 @@ const RegisterScreen = ({ navigation }) => {
 
   const handleRegister = async () => {
     setError('');
+
     const result = await register(name, email, password);
     if (!result.success) {
       setError(result.error);
     }
+    
   };
 
   return (

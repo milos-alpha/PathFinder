@@ -7,6 +7,7 @@ import BuildingCard from '../components/BuildingCard';
 import LoadingIndicator from '../components/LoadingIndicator';
 import api from '../services/api';
 import { useNavigation } from '@react-navigation/native';
+import { BASE_URL } from '../constants/config';
 
 const HomeScreen = () => {
   const { user } = useContext(AuthContext);
@@ -19,7 +20,7 @@ const HomeScreen = () => {
   const fetchBuildings = async () => {
     try {
       setError('');
-      const response = await api.get('/user/buildings');
+      const response = await api.get(`${BASE_URL}/admin/buildings`);
       setBuildings(response.data);
     } catch (err) {
       console.error('Error fetching buildings:', err);

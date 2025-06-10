@@ -6,6 +6,7 @@ import TextInput from '../../components/TextInput';
 import api from '../../services/api';
 import { getCurrentLocation } from '../../services/location';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import { BASE_URL } from '../../constants/config';
 
 const AddBuildingScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -39,7 +40,7 @@ const AddBuildingScreen = ({ navigation }) => {
       setLoading(true);
       setError('');
       
-      const response = await api.post('/admin/buildings', {
+      const response = await api.post(`${BASE_URL}/admin/buildings`, {
         name,
         description,
         address,

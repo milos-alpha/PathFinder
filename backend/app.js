@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
+const fs = require('fs');
 
 // Connect to database
 connectDB();
@@ -12,7 +13,7 @@ const app = express();
 // Enable CORS for allowed origins
 const allowedOrigins = [
   'http://localhost:3000',
-  'http://192.168.39.241:3000',
+  'http://192.168.61.241:3000',
   'http://localhost:1420',
 ];
 
@@ -31,7 +32,18 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const uploadsDir = path.join(__dirname, 'uploads');
+
+// Check if directory exists, if not create it
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+    console.log('Uploads directory created');
+}
+
+// Then set up your static file serving
+app.use('/api/uploads', express.static(uploadsDir));
+
+app.get('/' ,(req ,res)=>res.send('hello'))
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
