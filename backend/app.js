@@ -125,7 +125,7 @@ app.get('/api/uploads/:filename', (req, res, next) => {
   next();
 });
 
-app.get('/' ,(req ,res)=>res.send('hello'))
+app.get('/' ,(req ,res)=>res.send('hello user'))
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
