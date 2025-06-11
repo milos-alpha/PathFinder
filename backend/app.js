@@ -13,7 +13,7 @@ const app = express();
 // Enable CORS for allowed origins
 const allowedOrigins = [
   'http://localhost:3000',
-  'http://192.168.61.241:3000',
+  'http://192.168.179.241:3000',
   'http://localhost:1420',
 ];
 
@@ -40,8 +40,90 @@ if (!fs.existsSync(uploadsDir)) {
     console.log('Uploads directory created');
 }
 
-// Then set up your static file serving
+// Regular static file serving (for viewing)
 app.use('/api/uploads', express.static(uploadsDir));
+
+// Download route - forces download of files
+app.get('/api/download/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(uploadsDir, filename);
+  
+  // Check if file exists
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+  
+  // Get file extension to determine content type
+  const ext = path.extname(filename).toLowerCase();
+  let contentType = 'application/octet-stream';
+  
+  // Set appropriate content type for common image formats
+  switch (ext) {
+    case '.png':
+      contentType = 'image/png';
+      break;
+    case '.jpg':
+    case '.jpeg':
+      contentType = 'image/jpeg';
+      break;
+    case '.gif':
+      contentType = 'image/gif';
+      break;
+    case '.svg':
+      contentType = 'image/svg+xml';
+      break;
+  }
+  
+  // Set headers to force download
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Type', contentType);
+  
+  // Send the file
+  res.sendFile(filePath);
+});
+
+// Alternative: Handle download parameter on regular uploads route
+app.get('/api/uploads/:filename', (req, res, next) => {
+  const filename = req.params.filename;
+  const filePath = path.join(uploadsDir, filename);
+  
+  // Check if download parameter is present
+  if (req.query.download === '1') {
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Get file extension for content type
+    const ext = path.extname(filename).toLowerCase();
+    let contentType = 'application/octet-stream';
+    
+    switch (ext) {
+      case '.png':
+        contentType = 'image/png';
+        break;
+      case '.jpg':
+      case '.jpeg':
+        contentType = 'image/jpeg';
+        break;
+      case '.gif':
+        contentType = 'image/gif';
+        break;
+      case '.svg':
+        contentType = 'image/svg+xml';
+        break;
+    }
+    
+    // Set download headers
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', contentType);
+    
+    return res.sendFile(filePath);
+  }
+  
+  // If no download parameter, continue to regular static serving
+  next();
+});
 
 app.get('/' ,(req ,res)=>res.send('hello'))
 

@@ -5,6 +5,7 @@ import QRCodeModal from '../../components/QRCodeModal';
 import api from '../../services/api';
 import AnimatedButton from '../../components/AnimatedButton';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import { BASE_URL } from '../../constants/config';
 
 const QRCodeScreen = ({ route }) => {
   const { buildingId } = route.params;
@@ -21,11 +22,12 @@ const QRCodeScreen = ({ route }) => {
         const buildingData = response.data;
         
         setBuilding(buildingData.building);
+        console.log(buildingData);
         
         // Construct the correct QR code image URL
         if (buildingData.qrCodeUrl) {
           // Use the URL provided by the backend
-          setQrCodeUrl(buildingData.qrCodeUrl);
+          setQrCodeUrl(BASE_URL + buildingData.qrCodeUrl);
         } else {
           setError('QR code not available for this building');
         }
@@ -46,15 +48,17 @@ const QRCodeScreen = ({ route }) => {
       return;
     }
 
-    try {
-      await Share.share({
-        message: `QR Code for ${building?.name || 'Building'}`,
-        url: qrCodeUrl,
-      });
-    } catch (error) {
-      console.error('Error sharing QR code:', error);
-      Alert.alert('Error', 'Failed to share QR code');
-    }
+try {
+  // Option 1: Simple download parameter approach
+  const downloadUrl = `${qrCodeUrl}${qrCodeUrl?.includes('?') ? '&' : '?'}download=1`;
+  await Share.share({
+    message: `Download QR Code for ${building?.name || 'Building'}: ${downloadUrl}\n\nClick the link to automatically download the QR code image.`,
+    url: downloadUrl,
+  });
+} catch (error) {
+  console.error('Error sharing QR code:', error);
+  Alert.alert('Error', 'Failed to share QR code');
+}
   };
 
   const handleRetry = async () => {
@@ -112,7 +116,7 @@ const QRCodeScreen = ({ route }) => {
               setError('Failed to load QR code image');
             }}
           />
-          
+          s
           <AnimatedButton
             title="View Full QR Code"
             onPress={() => setModalVisible(true)}

@@ -47,6 +47,8 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<key>GMSApiKey</key>
+	<string>AIzaSyCkZyFkG0hRCL9HHMHyRGu4T7Cexhrktq0</string>
 	<false/>
 </dict>
 </plist>

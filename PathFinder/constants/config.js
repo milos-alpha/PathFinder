@@ -1,5 +1,5 @@
-export const BASE_URL = __DEV__
-  ? 'http://192.168.67.241:5000/api'   // Development URL
+export const  BASE_URL = __DEV__
+  ? 'http://192.168.179.241:5000/api'   // Development URL
   : 'https://your-production-api.com/api'; // Production URL
 
 export const LOCATION_CONFIG = {

@@ -77,7 +77,7 @@ exports.getBuildingQRCode = async (req, res) => {
 
     // Return JSON with the URL instead of sending the file
     res.json({
-      qrCodeUrl: `/api/uploads/qr-${building._id}.png`,
+      qrCodeUrl: `/uploads/qr-${building._id}.png`,
       building: {
         id: building._id,
         name: building.name,
