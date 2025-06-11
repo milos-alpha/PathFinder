@@ -10,13 +10,21 @@ const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useContext(AuthContext);
 
   const handleLogin = async () => {
     setError('');
-    const result = await login(email, password);
-    if (!result.success) {
-      setError(result.error);
+    setIsLoading(true);
+    try {
+      const result = await login(email, password);
+      if (!result.success) {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -44,7 +52,12 @@ const LoginScreen = ({ navigation }) => {
         secureTextEntry
       />
       
-      <AnimatedButton title="Login" onPress={handleLogin} />
+      <AnimatedButton 
+        title="Login" 
+        onPress={handleLogin} 
+        isLoading={isLoading}
+        disabled={isLoading}
+      />
       
       <View style={styles.footer}>
         <Text>Don't have an account? </Text>

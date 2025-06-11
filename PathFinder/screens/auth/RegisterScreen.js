@@ -10,16 +10,23 @@ const RegisterScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { register } = useContext(AuthContext);
 
   const handleRegister = async () => {
     setError('');
+    setIsLoading(true);
 
-    const result = await register(name, email, password);
-    if (!result.success) {
-      setError(result.error);
+    try {
+      const result = await register(name, email, password);
+      if (!result.success) {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
     }
-    
   };
 
   return (
@@ -49,7 +56,12 @@ const RegisterScreen = ({ navigation }) => {
         onChangeText={setPassword}
         secureTextEntry
       />
-      <AnimatedButton title="Register" onPress={handleRegister} />
+      <AnimatedButton 
+        title="Register" 
+        onPress={handleRegister} 
+        isLoading={isLoading}
+        disabled={isLoading}
+      />
 
       <View style={styles.footer}>
         <Text>Already have an account? </Text>
