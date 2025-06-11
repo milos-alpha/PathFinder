@@ -1,4 +1,4 @@
-const Building = require('../models/Building');
+const Building = require('../models/building');
 
 exports.searchBuildings = async (req, res) => {
   try {

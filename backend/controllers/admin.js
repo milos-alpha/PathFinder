@@ -1,5 +1,5 @@
-const Building = require('../models/Building');
-const QRCode = require('../models/QRCode');
+const Building = require('../models/building');
+const QRCode = require('../models/qrcode');
 const qr = require('qr-image');
 const fs = require('fs');
 const path = require('path');

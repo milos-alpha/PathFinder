@@ -1,6 +1,6 @@
 export const  BASE_URL = __DEV__
   ? 'http://192.168.179.241:5000/api'   // Development URL
-  : 'https://your-production-api.com/api'; // Production URL
+  : 'https://backend-zodm.onrender.com/api'; // Production URL
 
 export const LOCATION_CONFIG = {
   TIMEOUT: 15000,
