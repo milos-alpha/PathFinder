@@ -10,12 +10,32 @@ connectDB();
 
 const app = express();
 
-// Enable CORS for allowed origins
 const allowedOrigins = [
   'http://localhost:3000',
   'http://192.168.179.241:3000',
   'http://localhost:1420',
+  'https://backend-3utx.onrender.com'
 ];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // For React Native, allow all origins in production or be more specific
+    if (process.env.NODE_ENV === 'production' && !origin) {
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.indexOf(origin) === -1 && origin) {
+      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
 
 app.use(cors({
   origin: function(origin, callback) {

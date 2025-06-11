@@ -1,6 +1,6 @@
 export const BASE_URL = __DEV__
-  ? 'http://192.168.179.241:5000/api'   // Development URL (localhost)
-  : 'https://backend-3utx.onrender.com/'; // Removed :5000 for production
+  ? 'http://192.168.179.241:5000/api'   // Development URL
+  : 'https://backend-3utx.onrender.com/api'; // Production URL - note the /api path
 
 export const LOCATION_CONFIG = {
   TIMEOUT: 15000,

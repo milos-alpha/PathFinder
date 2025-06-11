@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await api.post('/api/auth/login', { email, password });
+      const response = await api.post('/auth/login', { email, password });
       const { token, user: userData } = response.data;
       
       await AsyncStorage.setItem('token', token);
@@ -52,9 +52,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password, role = 'user') => {
     try {
-      const response = await api.post('/api/auth/register', { name, email, password, role });
-
-      console.log(response)
+      const response = await api.post('/auth/register', { name, email, password, role });
       const { token, user: userData } = response.data;
       
       await AsyncStorage.setItem('token', token);
