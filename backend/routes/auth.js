@@ -22,4 +22,6 @@ router.post(
   authController.login
 );
 
+router.get('/users', authController.getAllUsers);
+
 module.exports = router;

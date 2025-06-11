@@ -47,3 +47,44 @@ exports.login = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+// Add this to your existing controller file
+
+/**
+ * @desc    Get all users
+ * @route   GET /api/users
+ * @access  Private/Admin
+ */
+exports.getAllUsers = async (req, res) => {
+  try {
+    // Pagination parameters (optional)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get users with pagination
+    const users = await User.find()
+      .select('-password -__v') // Exclude password and version key
+      .skip(skip)
+      .limit(limit);
+
+    // Count total users for pagination info
+    const total = await User.countDocuments();
+
+    res.json({
+      success: true,
+      count: users.length,
+      total,
+      pages: Math.ceil(total / limit),
+      currentPage: page,
+      data: users
+    });
+    
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ 
+      success: false,
+      error: 'Server error' 
+    });
+  }
+};
