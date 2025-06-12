@@ -17,46 +17,44 @@ const allowedOrigins = [
   'https://backend-3utx.onrender.com'
 ];
 
+// Single CORS configuration
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (like mobile apps, curl requests, or Postman)
     if (!origin) return callback(null, true);
     
-    // For React Native, allow all origins in production or be more specific
-    if (process.env.NODE_ENV === 'production' && !origin) {
+    // In production, also allow requests from your frontend domains
+    if (process.env.NODE_ENV === 'production') {
+      // Add your frontend domains here when you deploy them
+      const productionOrigins = [
+        'https://backend-3utx.onrender.com',
+        // Add your frontend URLs here when deployed
+      ];
+      if (productionOrigins.includes(origin) || !origin) {
+        return callback(null, true);
+      }
+    }
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
       return callback(null, true);
     }
     
-    if (allowedOrigins.indexOf(origin) === -1 && origin) {
-      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  credentials: true,
-  optionsSuccessStatus: 200
-}));
-
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
+    // Reject if origin not allowed
+    const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+    return callback(new Error(msg), false);
   },
   credentials: true,
   optionsSuccessStatus: 200
 }));
 
 app.use(express.json());
+
 const uploadsDir = path.join(__dirname, 'uploads');
 
 // Check if directory exists, if not create it
 if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
+    fs.mkdirSync(uploadsDir, { recursive: true });
     console.log('Uploads directory created');
 }
 
@@ -145,20 +143,62 @@ app.get('/api/uploads/:filename', (req, res, next) => {
   next();
 });
 
-app.get('/api/' ,(req ,res)=>res.send('hello user'))
-app.get('/api/auth', require('./routes/auth'));
-app.get('/api/admin', require('./routes/admin'));
-app.get('/api/user', require('./routes/user'));
+// Basic health check route
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
 
-// Routes
+// Test route
+app.get('/api/', (req, res) => {
+  res.json({ 
+    message: 'Backend API is working',
+    availableRoutes: [
+      '/api/health',
+      '/api/auth/register',
+      '/api/auth/login', 
+      '/api/auth/users',
+      '/api/admin/buildings',
+      '/api/user/buildings/search'
+    ]
+  });
+});
+
+// Routes - Use only app.use() for route mounting
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/user', require('./routes/user'));
 
-// Error handling
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ 
+    error: 'API endpoint not found',
+    path: req.originalUrl,
+    method: req.method
+  });
+});
+
+// Global error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+  console.error('Error:', err.message);
+  console.error('Stack:', err.stack);
+  
+  // CORS errors
+  if (err.message.includes('CORS policy')) {
+    return res.status(403).json({ 
+      error: 'CORS policy violation',
+      message: err.message 
+    });
+  }
+  
+  // Default error response
+  res.status(err.status || 500).json({ 
+    error: 'Something went wrong!',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+  });
 });
 
 module.exports = app;
