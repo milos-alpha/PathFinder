@@ -10,42 +10,48 @@ connectDB();
 
 const app = express();
 
+// For React Native, we need to allow requests with no origin
+// Web browsers have origins, but mobile apps don't
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://192.168.225.241:3000',
-  'http://localhost:1420',
-  'https://backend-3utx.onrender.com'
+  'http://localhost:3000',        // Web development
+  'http://192.168.225.241:3000',  // Local web server
+  'http://localhost:1420',        // Alternative local port
+  'https://backend-3utx.onrender.com', // Your backend URL
 ];
 
-// Single CORS configuration
+// CORS configuration optimized for React Native
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl requests, or Postman)
-    if (!origin) return callback(null, true);
-    
-    // In production, also allow requests from your frontend domains
-    if (process.env.NODE_ENV === 'production') {
-      // Add your frontend domains here when you deploy them
-      const productionOrigins = [
-        'https://backend-3utx.onrender.com',
-        // Add your frontend URLs here when deployed
-      ];
-      if (productionOrigins.includes(origin) || !origin) {
-        return callback(null, true);
-      }
-    }
-    
-    // Check if origin is in allowed list
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // IMPORTANT: React Native apps don't send an origin header
+    // Always allow requests with no origin (mobile apps, Postman, curl)
+    if (!origin) {
       return callback(null, true);
     }
     
+    // Allow localhost and development origins
+    if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('192.168.')) {
+      return callback(null, true);
+    }
+    
+    // Check allowed origins list
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // In production, be more permissive for mobile apps
+    if (process.env.NODE_ENV === 'production') {
+      // You can add additional logic here if needed
+      console.log('Blocked origin in production:', origin);
+    }
+    
     // Reject if origin not allowed
-    const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+    const msg = `CORS policy does not allow access from origin: ${origin}`;
     return callback(new Error(msg), false);
   },
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 
 app.use(express.json());
