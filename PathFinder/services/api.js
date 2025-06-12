@@ -31,7 +31,7 @@ api.interceptors.response.use(
   },
   async (error) => {
     // Log error for debugging
-    if (__DEV__) {
+    if (!__DEV__) {
       console.error('❌ API Error:', error.response?.status, error.response?.data || error.message);
     }
     

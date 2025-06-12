@@ -2,7 +2,7 @@
 const isDevelopment = __DEV__;
 
 // Base URLs for different environments
-const DEVELOPMENT_URL = 'http://192.168.225.241:5000/api';
+const DEVELOPMENT_URL = 'http://192.168.150.241:5000/api';
 const PRODUCTION_URL = 'https://backend-3utx.onrender.com/api';
 
 export const BASE_URL = isDevelopment ? DEVELOPMENT_URL : PRODUCTION_URL;

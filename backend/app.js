@@ -14,7 +14,7 @@ const app = express();
 // Web browsers have origins, but mobile apps don't
 const allowedOrigins = [
   'http://localhost:3000',        // Web development
-  'http://192.168.225.241:3000',  // Local web server
+  'http://192.168.150.241:3000',  // Local web server
   'http://localhost:1420',        // Alternative local port
   'https://backend-3utx.onrender.com', // Your backend URL
 ];
