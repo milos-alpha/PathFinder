@@ -12,7 +12,7 @@ const app = express();
 
 const allowedOrigins = [
   'http://localhost:3000',
-  'http://192.168.179.241:3000',
+  'http://192.168.225.241:3000',
   'http://localhost:1420',
   'https://backend-3utx.onrender.com'
 ];

@@ -1,5 +1,5 @@
 export const BASE_URL = __DEV__
-  ? 'http://192.168.179.241:5000/api'   // Development URL
+  ? 'http://192.168.225.241:5000/api'   // Development URL
   : 'https://backend-3utx.onrender.com/api'; // Production URL - note the /api path
 
 export const LOCATION_CONFIG = {
